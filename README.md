@@ -16,6 +16,19 @@ Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genere
 - Automatische bestandsnaamgeving met de juiste taalcode (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels)
 - Real-time voortgangsindicator en logvenster
 
+## Vereisten
+
+- Python 3.8 of hoger
+- FFmpeg (moet in het systeempad beschikbaar zijn)
+- OpenAI Whisper
+- PyTorch (bij voorkeur met CUDA-ondersteuning voor GPU-versnelling)
+- NVIDIA GPU met actuele drivers (voor GPU-versnelling)
+- De volgende Python-pakketten:
+  - tkinter
+  - whisper
+  - torch
+  - ffmpeg-python
+
 ## Installatie
 
 1. Clone of download deze repository:
@@ -24,23 +37,35 @@ Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genere
    cd whisper-subtitle-generator
    ```
 
-2. Installeer de benodigde afhankelijkheden:
+2. Installeer OpenAI Whisper en FFmpeg Python:
    ```
    pip install git+https://github.com/openai/whisper.git
-   pip install torch torchvision torchaudio
    pip install ffmpeg-python
    ```
 
-   Voor GPU-ondersteuning, zorg dat je de juiste PyTorch versie installeert met CUDA-ondersteuning:
+3. Installeer PyTorch met CUDA-ondersteuning (voor GPU-versnelling):
    ```
-   # Voor NVIDIA GPU's met CUDA
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
    ```
+   
+   Je kunt controleren of PyTorch correct is geïnstalleerd met CUDA-ondersteuning door dit script uit te voeren:
+   ```python
+   import torch
+   print(f"PyTorch versie: {torch.__version__}")
+   print(f"CUDA beschikbaar: {torch.cuda.is_available()}")
+   if torch.cuda.is_available():
+       print(f"CUDA versie: {torch.version.cuda}")
+       print(f"GPU: {torch.cuda.get_device_name(0)}")
+   ```
 
-3. Zorg ervoor dat FFmpeg is geïnstalleerd op je systeem:
+4. Zorg ervoor dat FFmpeg is geïnstalleerd op je systeem:
    - **Windows**: Download van [ffmpeg.org](https://ffmpeg.org/download.html) en voeg toe aan PATH
    - **macOS**: `brew install ffmpeg`
    - **Linux**: `sudo apt install ffmpeg` of equivalent voor je distributie
+
+5. Zorg voor actuele NVIDIA drivers:
+   - Download en installeer de nieuwste drivers van [nvidia.com/Download](https://www.nvidia.com/Download/index.aspx)
+   - De CUDA Toolkit (versie 11.8 aanbevolen) kan worden gedownload van [developer.nvidia.com/cuda-downloads](https://developer.nvidia.com/cuda-downloads)
 
 ## Gebruik
 
@@ -104,15 +129,32 @@ Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genere
 
 7. De ondertitels worden opgeslagen als `[video-naam].[taalcode].srt` in de gekozen map (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels)
 
-## Modelgrootte en prestaties
+## Prestaties en GPU vs CPU
 
-| Model  | Grootte | Geheugengebruik | Relatieve snelheid | Nauwkeurigheid |
-|--------|---------|----------------|-------------------|---------------|
+De verwerkingssnelheid van Whisper is sterk afhankelijk van de gebruikte hardware:
+
+| Hardware | Relatieve snelheid | Opmerkingen |
+|----------|-------------------|------------|
+| GPU (NVIDIA GTX 1070 of beter) | 5-10x sneller | Aanbevolen voor grotere bestanden en batch verwerking |
+| CPU (moderne multi-core) | Basissnelheid | Werkt op alle computers maar veel langzamer |
+
+Een video van 10 minuten verwerken met het "small" model:
+- Met GPU (GTX 1070): ~1-2 minuten
+- Met CPU (moderne i7/Ryzen): ~7-15 minuten
+
+**Tip**: Als je een compatibele NVIDIA GPU hebt zoals de GTX 1070, zorg dan dat je de GPU-modus gebruikt voor veel snellere verwerking!
+
+## Modelgroottes en prestaties
+
+| Model  | Bestandsgrootte | Geheugengebruik | Relatieve snelheid | Nauwkeurigheid |
+|--------|----------------|----------------|-------------------|---------------|
 | tiny   | 39M     | ~1GB           | ~32x              | Basis         |
 | base   | 74M     | ~1GB           | ~16x              | Redelijk      |
 | small  | 244M    | ~2GB           | ~6x               | Goed          |
 | medium | 769M    | ~5GB           | ~2x               | Zeer goed     |
 | large  | 1550M   | ~10GB          | 1x                | Uitstekend    |
+
+De aanbevolen modelgrootte is "small" voor een goede balans tussen snelheid en nauwkeurigheid. Als je een goede GPU hebt, kun je ook het "medium" model overwegen.
 
 ## Probleemoplossing
 
