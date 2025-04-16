@@ -4,16 +4,18 @@ from tkinter import filedialog, messagebox, ttk
 import threading
 import time
 import subprocess
+import queue
+from tkinter.scrolledtext import ScrolledText
 
 class WhisperSubtitleGenerator:
     def __init__(self, root):
         self.root = root
         self.root.title("Whisper Subtitle Generator")
-        self.root.geometry("800x600")
+        self.root.geometry("900x650")
         self.root.resizable(True, True)
         
         # Instellingen
-        self.video_path = tk.StringVar()
+        self.video_paths = []  # We gebruiken een lijst in plaats van een StringVar
         self.output_dir = tk.StringVar()
         self.output_dir.set(os.path.expanduser("~/Documents"))
         self.model_size = tk.StringVar(value="small")  # Standaard model grootte
@@ -47,6 +49,8 @@ class WhisperSubtitleGenerator:
         
         # Status variabelen
         self.is_processing = False
+        self.processing_queue = queue.Queue()
+        self.current_file = tk.StringVar(value="")
         
         # UI opbouwen
         self.create_widgets()
@@ -61,12 +65,27 @@ class WhisperSubtitleGenerator:
         title_label.pack(pady=(0, 20))
         
         # Bestandsselectie
-        file_frame = ttk.LabelFrame(main_frame, text="Video selecteren", padding="10")
+        file_frame = ttk.LabelFrame(main_frame, text="Video's selecteren", padding="10")
         file_frame.pack(fill=tk.X, pady=10)
         
-        ttk.Label(file_frame, text="Video bestand:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        ttk.Entry(file_frame, textvariable=self.video_path, width=50).grid(row=0, column=1, padx=5, pady=5)
-        ttk.Button(file_frame, text="Bladeren...", command=self.browse_video).grid(row=0, column=2, padx=5, pady=5)
+        # Listbox voor geselecteerde bestanden
+        list_frame = ttk.Frame(file_frame)
+        list_frame.grid(row=0, column=0, rowspan=3, columnspan=2, padx=5, pady=5, sticky="nsew")
+        
+        self.files_listbox = tk.Listbox(list_frame, width=70, height=5)
+        self.files_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        scrollbar = ttk.Scrollbar(list_frame, command=self.files_listbox.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.files_listbox.config(yscrollcommand=scrollbar.set)
+        
+        # Knoppen voor bestandsbeheer
+        button_frame = ttk.Frame(file_frame)
+        button_frame.grid(row=0, column=2, padx=5, pady=5, sticky="nw")
+        
+        ttk.Button(button_frame, text="Toevoegen...", command=self.browse_videos).pack(pady=2, fill=tk.X)
+        ttk.Button(button_frame, text="Verwijderen", command=self.remove_selected_video).pack(pady=2, fill=tk.X)
+        ttk.Button(button_frame, text="Alles verwijderen", command=self.clear_videos).pack(pady=2, fill=tk.X)
         
         # Model instellingen
         model_frame = ttk.LabelFrame(main_frame, text="Whisper Model Instellingen", padding="10")
@@ -93,41 +112,24 @@ class WhisperSubtitleGenerator:
         ttk.Entry(model_frame, textvariable=self.output_dir, width=50).grid(row=2, column=1, padx=5, pady=5)
         ttk.Button(model_frame, text="Bladeren...", command=self.browse_output_dir).grid(row=2, column=2, padx=5, pady=5)
         
-        # Instructies
-        instructions_frame = ttk.LabelFrame(main_frame, text="Instructies", padding="10")
-        instructions_frame.pack(fill=tk.X, pady=10)
+        # Huidige voortgang
+        current_frame = ttk.LabelFrame(main_frame, text="Huidige verwerking", padding="10")
+        current_frame.pack(fill=tk.X, pady=10)
         
-        instructions_text = (
-            "1. Selecteer een videobestand\n"
-            "2. Kies de gewenste model grootte (grotere modellen zijn nauwkeuriger maar langzamer)\n"
-            "3. Selecteer de taal voor de ondertitels\n"
-            "4. Selecteer optioneel een uitvoermap (standaard naast de video)\n"
-            "5. Klik op 'Start' om Whisper te starten\n"
-            "6. Wacht tot het proces is voltooid\n\n"
-            "Let op: Dit programma vereist dat OpenAI Whisper en FFmpeg zijn geïnstalleerd.\n"
-            "Installeer deze met: pip install git+https://github.com/openai/whisper.git ffmpeg-python"
-        )
+        ttk.Label(current_frame, text="Bestand:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Label(current_frame, textvariable=self.current_file).grid(row=0, column=1, sticky=tk.W, pady=5)
         
-        ttk.Label(instructions_frame, text=instructions_text, justify=tk.LEFT).pack(padx=5, pady=5)
+        # Voortgangsbalk
+        self.progress_var = tk.DoubleVar()
+        self.progress = ttk.Progressbar(current_frame, variable=self.progress_var, length=100, mode='indeterminate')
+        self.progress.grid(row=1, column=0, columnspan=3, sticky="ew", pady=5, padx=5)
         
         # Log venster
         log_frame = ttk.LabelFrame(main_frame, text="Log", padding="10")
         log_frame.pack(fill=tk.BOTH, expand=True, pady=10)
         
-        self.log_text = tk.Text(log_frame, wrap=tk.WORD, height=10)
-        self.log_text.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
-        
-        scrollbar = ttk.Scrollbar(log_frame, command=self.log_text.yview)
-        scrollbar.pack(fill=tk.Y, side=tk.RIGHT)
-        self.log_text.config(yscrollcommand=scrollbar.set)
-        
-        # Voortgangsbalk
-        progress_frame = ttk.Frame(main_frame)
-        progress_frame.pack(fill=tk.X, pady=5)
-        
-        self.progress_var = tk.DoubleVar()
-        self.progress = ttk.Progressbar(progress_frame, variable=self.progress_var, length=100, mode='indeterminate')
-        self.progress.pack(fill=tk.X)
+        self.log_text = ScrolledText(log_frame, wrap=tk.WORD, height=10)
+        self.log_text.pack(fill=tk.BOTH, expand=True)
         
         # Actieknoppen
         button_frame = ttk.Frame(main_frame)
@@ -141,23 +143,46 @@ class WhisperSubtitleGenerator:
         
         ttk.Button(button_frame, text="Afsluiten", command=self.root.destroy).pack(side=tk.RIGHT, padx=5)
     
-    def browse_video(self):
+    def browse_videos(self):
         filetypes = (
             ("Video bestanden", "*.mp4 *.avi *.mov *.mkv *.webm"),
             ("Alle bestanden", "*.*")
         )
         
-        filename = filedialog.askopenfilename(
-            title="Selecteer een video bestand",
+        filenames = filedialog.askopenfilenames(
+            title="Selecteer videobestand(en)",
             filetypes=filetypes
         )
         
-        if filename:
-            self.video_path.set(filename)
-            # Standaard uitvoermap instellen op dezelfde map als de video
-            if not self.output_dir.get():
-                self.output_dir.set(os.path.dirname(filename))
-            self.log(f"Video geselecteerd: {filename}")
+        if filenames:
+            # Voeg nieuwe bestanden toe aan de lijst
+            for file in filenames:
+                if file not in self.video_paths:
+                    self.video_paths.append(file)
+                    self.files_listbox.insert(tk.END, os.path.basename(file))
+            
+            # Standaard uitvoermap instellen op basis van het eerste bestand als het nog niet is ingesteld
+            if not self.output_dir.get() and self.video_paths:
+                self.output_dir.set(os.path.dirname(self.video_paths[0]))
+            
+            self.log(f"{len(filenames)} video bestand(en) toegevoegd")
+    
+    def remove_selected_video(self):
+        selected_indices = self.files_listbox.curselection()
+        if not selected_indices:
+            return
+        
+        # Verwijder van laatste naar eerste om indexverschuiving te vermijden
+        for i in sorted(selected_indices, reverse=True):
+            del self.video_paths[i]
+            self.files_listbox.delete(i)
+        
+        self.log(f"{len(selected_indices)} bestand(en) verwijderd uit de lijst")
+    
+    def clear_videos(self):
+        self.video_paths.clear()
+        self.files_listbox.delete(0, tk.END)
+        self.log("Alle bestanden verwijderd uit de lijst")
     
     def browse_output_dir(self):
         directory = filedialog.askdirectory(
@@ -203,22 +228,15 @@ class WhisperSubtitleGenerator:
         if self.is_processing:
             return
             
-        video_path = self.video_path.get()
+        if not self.video_paths:
+            messagebox.showerror("Fout", "Selecteer eerst één of meer videobestanden.")
+            return
+        
         output_dir = self.output_dir.get()
-        model_size = self.model_size.get()
-        taal = self.taal.get()
         
-        if not video_path:
-            messagebox.showerror("Fout", "Selecteer eerst een video bestand.")
-            return
-        
-        if not os.path.exists(video_path):
-            messagebox.showerror("Fout", "Het geselecteerde video bestand bestaat niet.")
-            return
-        
-        # Als er geen uitvoermap is geselecteerd, gebruik de map van de video
+        # Als er geen uitvoermap is geselecteerd, gebruik de map van de eerste video
         if not output_dir:
-            output_dir = os.path.dirname(video_path)
+            output_dir = os.path.dirname(self.video_paths[0])
             self.output_dir.set(output_dir)
         
         if not os.path.exists(output_dir):
@@ -229,16 +247,24 @@ class WhisperSubtitleGenerator:
         if not self.check_dependencies():
             return
             
+        # Start verwerking in een aparte thread
         self.is_processing = True
         self.start_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
         self.progress.start(10)
         
-        taal_naam = self.iso_naar_taal.get(taal, taal.upper())
-        self.log(f"Geselecteerde taal: {taal_naam} ({taal})")
+        # Reset de verwerkingswachtrij
+        while not self.processing_queue.empty():
+            self.processing_queue.get()
         
-        # Start verwerking in een aparte thread
-        threading.Thread(target=self.run_whisper, args=(video_path, output_dir, model_size, taal), daemon=True).start()
+        # Zet alle bestanden in de wachtrij
+        for video_path in self.video_paths:
+            self.processing_queue.put(video_path)
+        
+        total_files = len(self.video_paths)
+        self.log(f"Start verwerking van {total_files} bestand(en)")
+        
+        threading.Thread(target=self.process_queue, args=(output_dir,), daemon=True).start()
     
     def stop_processing(self):
         if not self.is_processing:
@@ -247,58 +273,82 @@ class WhisperSubtitleGenerator:
         self.is_processing = False
         self.log("Verwerking wordt gestopt...")
         self.stop_button.config(state=tk.DISABLED)
+        self.current_file.set("Gestopt")
     
-    def run_whisper(self, video_path, output_dir, model_size, taal):
+    def process_queue(self, output_dir):
+        model_size = self.model_size.get()
+        taal = self.taal.get()
+        taal_naam = self.iso_naar_taal.get(taal, taal.upper())
+        
+        self.log(f"Geselecteerde taal: {taal_naam} ({taal})")
+        self.log(f"Model grootte: {model_size}")
+        
+        total_files = self.processing_queue.qsize()
+        processed_files = 0
+        
         try:
-            # Laad Whisper modules hier zodat ze alleen binnen de thread worden geïmporteerd
+            # Laad Whisper modules
             import whisper
             from whisper.utils import get_writer
             
-            # Toon bestandsinfo
-            video_name = os.path.basename(video_path)
-            base_name = os.path.splitext(video_name)[0]
-            output_path = os.path.join(output_dir, f"{base_name}.{taal}.srt")
-            
-            self.log(f"Spraakherkenning starten op: {video_name}")
-            self.log(f"Model grootte: {model_size}")
-            self.log(f"Uitvoer bestand: {output_path}")
-            
-            # Laad het model
+            # Laad het model eenmalig voor alle bestanden
             self.log(f"Model laden... (dit kan even duren)")
             model = whisper.load_model(model_size)
             
-            # Voer transcriptie uit met de geselecteerde taal
-            self.log("Transcriptie uitvoeren...")
-            result = model.transcribe(
-                video_path,
-                language=taal,  # Gebruik de geselecteerde taal
-                task="transcribe",
-                verbose=False
-            )
-            
-            # Maak SRT writer
-            srt_writer = get_writer("srt", output_dir)
-            
-            # Schrijf SRT-bestand
-            self.log("SRT-bestand genereren...")
-            srt_writer(result, base_name, {"max_line_width": 42, "max_line_count": 2})
-            
-            # Hernoem bestand naar [taal].srt als dat nog niet is gedaan
-            srt_default_path = os.path.join(output_dir, f"{base_name}.srt")
-            if os.path.exists(srt_default_path) and not os.path.exists(output_path):
-                os.rename(srt_default_path, output_path)
+            while not self.processing_queue.empty() and self.is_processing:
+                video_path = self.processing_queue.get()
+                processed_files += 1
                 
-            self.log(f"Ondertitels gegenereerd en opgeslagen in: {output_path}")
-            messagebox.showinfo("Voltooid", f"Ondertitels zijn succesvol gegenereerd en opgeslagen als:\n{output_path}")
+                # Update huidige bestand info
+                video_name = os.path.basename(video_path)
+                self.current_file.set(f"({processed_files}/{total_files}) {video_name}")
+                
+                try:
+                    # Toon bestandsinfo
+                    base_name = os.path.splitext(video_name)[0]
+                    output_path = os.path.join(output_dir, f"{base_name}.{taal}.srt")
+                    
+                    self.log(f"Verwerking van: {video_name} ({processed_files}/{total_files})")
+                    
+                    # Voer transcriptie uit met de geselecteerde taal
+                    self.log(f"Transcriptie uitvoeren op {video_name}...")
+                    result = model.transcribe(
+                        video_path,
+                        language=taal,  # Gebruik de geselecteerde taal
+                        task="transcribe",
+                        verbose=False
+                    )
+                    
+                    # Maak SRT writer
+                    srt_writer = get_writer("srt", output_dir)
+                    
+                    # Schrijf SRT-bestand
+                    self.log(f"SRT-bestand genereren voor {video_name}...")
+                    srt_writer(result, base_name, {"max_line_width": 42, "max_line_count": 2})
+                    
+                    # Hernoem bestand naar [taal].srt als dat nog niet is gedaan
+                    srt_default_path = os.path.join(output_dir, f"{base_name}.srt")
+                    if os.path.exists(srt_default_path) and not os.path.exists(output_path):
+                        os.rename(srt_default_path, output_path)
+                        
+                    self.log(f"Ondertitels opgeslagen in: {output_path}")
+                    
+                except Exception as e:
+                    self.log(f"FOUT bij verwerking van {video_name}: {str(e)}")
+            
+            if self.is_processing:  # Als we niet handmatig zijn gestopt
+                self.log(f"Alle {processed_files} bestanden zijn verwerkt")
+                messagebox.showinfo("Voltooid", f"Alle {processed_files} bestanden zijn succesvol verwerkt.")
             
         except Exception as e:
             self.log(f"FOUT tijdens verwerking: {str(e)}")
-            messagebox.showerror("Fout", f"Er is een fout opgetreden tijdens het verwerken: {str(e)}")
+            messagebox.showerror("Fout", f"Er is een fout opgetreden: {str(e)}")
         finally:
             self.is_processing = False
             self.progress.stop()
             self.start_button.config(state=tk.NORMAL)
             self.stop_button.config(state=tk.DISABLED)
+            self.current_file.set("")
 
 
 # Applicatie starten
