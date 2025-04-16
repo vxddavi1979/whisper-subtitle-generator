@@ -33,7 +33,7 @@ Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genere
 
 1. Clone of download deze repository:
    ```
-   git clone https://github.com/gebruikersnaam/whisper-subtitle-generator.git
+   git clone https://github.com/vxddavi1979/whisper-subtitle-generator.git
    cd whisper-subtitle-generator
    ```
 
