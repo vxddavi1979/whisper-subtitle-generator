@@ -1,14 +1,14 @@
 # Whisper Subtitle Generator (Nederlands)
 
-Een gebruiksvriendelijke desktop applicatie om automatisch Nederlandse ondertitels te genereren voor video's met behulp van OpenAI's Whisper spraakherkenningsmodel.
+Een gebruiksvriendelijke desktop applicatie om automatisch Nederlandse ondertitels te genereren voor video's met behulp van OpenAI's Whisper spraakherkenningsmodel. Ondersteunt batch-verwerking voor meerdere videobestanden.
 
 ## Functies
 
 - Automatische spraakherkenning met behulp van OpenAI's Whisper AI
+- Batch-verwerking van meerdere videobestanden tegelijk
 - Gebruiksvriendelijke interface om bestanden te selecteren en ondertitelingsopties in te stellen
 - Ondersteuning voor verschillende videoformaten (mp4, avi, mov, mkv, webm, etc.)
 - Genereert ondertitels in SRT-formaat met de extensie `.nl.srt`
-- Keuze uit verschillende modelgroottes voor verschillende behoeften (compromis tussen nauwkeurigheid en snelheid)
 - Ondersteuning voor meerdere talen (Nederlands, Engels, Duits, Frans, enz.)
 - Automatische bestandsnaamgeving met de juiste taalcode (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels)
 - Real-time voortgangsindicator en logvenster
@@ -49,7 +49,10 @@ Een gebruiksvriendelijke desktop applicatie om automatisch Nederlandse ondertite
    python whisper_subtitle_generator.py
    ```
 
-2. Klik op "Bladeren..." om een videobestand te selecteren
+2. Video's toevoegen:
+   - Klik op "Toevoegen..." om één of meerdere videobestanden te selecteren
+   - Gebruik "Verwijderen" om geselecteerde bestanden te verwijderen
+   - Gebruik "Alles verwijderen" om de lijst leeg te maken
 
 3. Kies de gewenste modelgrootte:
    - **tiny**: Snelste, maar minst nauwkeurige
@@ -69,6 +72,8 @@ Een gebruiksvriendelijke desktop applicatie om automatisch Nederlandse ondertite
 5. (Optioneel) Kies een uitvoermap, of laat het programma de ondertitels naast de video opslaan
 
 6. Klik op "Start" en wacht tot het proces is voltooid
+   - De voortgang wordt getoond voor elk bestand
+   - Je kunt het proces pauzeren door op "Stop" te klikken
 
 7. De ondertitels worden opgeslagen als `[video-naam].[taalcode].srt` in de gekozen map (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels)
 
