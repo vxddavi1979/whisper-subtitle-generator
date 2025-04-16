@@ -9,6 +9,8 @@ Een gebruiksvriendelijke desktop applicatie om automatisch Nederlandse ondertite
 - Ondersteuning voor verschillende videoformaten (mp4, avi, mov, mkv, webm, etc.)
 - Genereert ondertitels in SRT-formaat met de extensie `.nl.srt`
 - Keuze uit verschillende modelgroottes voor verschillende behoeften (compromis tussen nauwkeurigheid en snelheid)
+- Ondersteuning voor meerdere talen (Nederlands, Engels, Duits, Frans, enz.)
+- Automatische bestandsnaamgeving met de juiste taalcode (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels)
 - Real-time voortgangsindicator en logvenster
 
 ## Vereisten
@@ -56,11 +58,19 @@ Een gebruiksvriendelijke desktop applicatie om automatisch Nederlandse ondertite
    - **medium**: Nauwkeuriger, maar langzamer
    - **large**: Meest nauwkeurig, maar traagste
 
-4. (Optioneel) Kies een uitvoermap, of laat het programma de ondertitels naast de video opslaan
+4. Selecteer de gewenste taal voor je ondertitels:
+   - Nederlands (nl)
+   - Engels (en)
+   - Duits (de)
+   - Frans (fr)
+   - Spaans (es)
+   - En vele andere talen
 
-5. Klik op "Start" en wacht tot het proces is voltooid
+5. (Optioneel) Kies een uitvoermap, of laat het programma de ondertitels naast de video opslaan
 
-6. De ondertitels worden opgeslagen als `[video-naam].nl.srt` in de gekozen map
+6. Klik op "Start" en wacht tot het proces is voltooid
+
+7. De ondertitels worden opgeslagen als `[video-naam].[taalcode].srt` in de gekozen map (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels)
 
 ## Modelgrootte en prestaties
 
