@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Whisper Subtitle Generator met taalselectie
-
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
