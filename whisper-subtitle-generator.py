@@ -20,6 +20,7 @@ class WhisperSubtitleGenerator:
         self.output_dir.set(os.path.expanduser("~/Documents"))
         self.model_size = tk.StringVar(value="small")  # Standaard model grootte
         self.taal = tk.StringVar(value="nl")  # Nederlands als standaard
+        self.use_gpu = tk.BooleanVar(value=True)  # Standaard GPU gebruiken indien beschikbaar
         
         # Taal naar ISO-code mapping
         self.taal_mapping = {
@@ -91,10 +92,19 @@ class WhisperSubtitleGenerator:
         model_frame = ttk.LabelFrame(main_frame, text="Whisper Model Instellingen", padding="10")
         model_frame.pack(fill=tk.X, pady=10)
         
+        # Model grootte
         ttk.Label(model_frame, text="Model grootte:").grid(row=0, column=0, sticky=tk.W, pady=5)
         ttk.Combobox(model_frame, textvariable=self.model_size, 
                     values=["tiny", "base", "small", "medium", "large"]).grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
         
+        # GPU / CPU keuze
+        gpu_frame = ttk.Frame(model_frame)
+        gpu_frame.grid(row=0, column=2, padx=15, pady=5, sticky=tk.W)
+        
+        ttk.Radiobutton(gpu_frame, text="GPU (sneller)", variable=self.use_gpu, value=True).pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(gpu_frame, text="CPU (langzamer)", variable=self.use_gpu, value=False).pack(side=tk.LEFT, padx=5)
+        
+        # Taal
         ttk.Label(model_frame, text="Taal:").grid(row=1, column=0, sticky=tk.W, pady=5)
         taal_combobox = ttk.Combobox(model_frame, width=20)
         taal_combobox['values'] = list(self.taal_mapping.keys())
@@ -108,9 +118,10 @@ class WhisperSubtitleGenerator:
         
         taal_combobox.bind('<<ComboboxSelected>>', on_taal_selected)
         
+        # Uitvoer map
         ttk.Label(model_frame, text="Uitvoer map:").grid(row=2, column=0, sticky=tk.W, pady=5)
-        ttk.Entry(model_frame, textvariable=self.output_dir, width=50).grid(row=2, column=1, padx=5, pady=5)
-        ttk.Button(model_frame, text="Bladeren...", command=self.browse_output_dir).grid(row=2, column=2, padx=5, pady=5)
+        ttk.Entry(model_frame, textvariable=self.output_dir, width=50).grid(row=2, column=1, columnspan=2, padx=5, pady=5)
+        ttk.Button(model_frame, text="Bladeren...", command=self.browse_output_dir).grid(row=2, column=3, padx=5, pady=5)
         
         # Huidige voortgang
         current_frame = ttk.LabelFrame(main_frame, text="Huidige verwerking", padding="10")
@@ -123,6 +134,13 @@ class WhisperSubtitleGenerator:
         self.progress_var = tk.DoubleVar()
         self.progress = ttk.Progressbar(current_frame, variable=self.progress_var, length=100, mode='indeterminate')
         self.progress.grid(row=1, column=0, columnspan=3, sticky="ew", pady=5, padx=5)
+        
+        # Informatie over GPU
+        gpu_info_frame = ttk.Frame(current_frame)
+        gpu_info_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=5, padx=5)
+        
+        gpu_tip = ttk.Label(gpu_info_frame, text="Tip: GPU verwerking is meestal 5-10x sneller dan CPU. Gebruik GPU indien beschikbaar.", font=("Arial", 9, "italic"))
+        gpu_tip.pack(anchor=tk.W)
         
         # Log venster
         log_frame = ttk.LabelFrame(main_frame, text="Log", padding="10")
@@ -142,6 +160,29 @@ class WhisperSubtitleGenerator:
         self.stop_button.pack(side=tk.LEFT, padx=5)
         
         ttk.Button(button_frame, text="Afsluiten", command=self.root.destroy).pack(side=tk.RIGHT, padx=5)
+        
+        # Check GPU beschikbaarheid
+        self.check_gpu_availability()
+    
+    def check_gpu_availability(self):
+        try:
+            import torch
+            has_cuda = torch.cuda.is_available()
+            
+            if has_cuda:
+                gpu_name = torch.cuda.get_device_name(0)
+                self.log(f"NVIDIA GPU gedetecteerd: {gpu_name}")
+                self.log("GPU verwerking is ingeschakeld (veel sneller)")
+            else:
+                self.log("Geen CUDA-compatibele GPU gedetecteerd. Terugvallen op CPU.")
+                self.log("Waarschuwing: CPU verwerking is aanzienlijk langzamer")
+                # Zet standaard naar CPU modus
+                self.use_gpu.set(False)
+                
+        except Exception as e:
+            self.log("Kon GPU beschikbaarheid niet bepalen. Fout: " + str(e))
+            self.log("Terugvallen op CPU verwerking")
+            self.use_gpu.set(False)
     
     def browse_videos(self):
         filetypes = (
@@ -203,10 +244,22 @@ class WhisperSubtitleGenerator:
         try:
             import whisper
             self.log("OpenAI Whisper succesvol geladen.")
-        except ImportError:
-            self.log("FOUT: OpenAI Whisper is niet geïnstalleerd!")
+            
+            # Controleer torch en CUDA
+            import torch
+            self.log(f"PyTorch versie: {torch.__version__}")
+            if torch.cuda.is_available() and self.use_gpu.get():
+                self.log(f"CUDA is beschikbaar: {torch.cuda.get_device_name(0)}")
+            else:
+                if self.use_gpu.get():
+                    self.log("CUDA is niet beschikbaar, maar GPU is geselecteerd. Controleer NVIDIA drivers.")
+                else:
+                    self.log("GPU modus is uitgeschakeld, gebruikt CPU (langzamer).")
+                
+        except ImportError as e:
+            self.log(f"FOUT: Ontbrekende dependency: {str(e)}")
             messagebox.showerror("Ontbrekende afhankelijkheid", 
-                              "OpenAI Whisper is niet geïnstalleerd. Installeer het met:\n\npip install git+https://github.com/openai/whisper.git")
+                              f"Ontbrekende dependency: {str(e)}\n\nInstalleer deze met pip install.")
             return False
         
         try:
@@ -264,6 +317,12 @@ class WhisperSubtitleGenerator:
         total_files = len(self.video_paths)
         self.log(f"Start verwerking van {total_files} bestand(en)")
         
+        # Log device info
+        if self.use_gpu.get():
+            self.log("Verwerking op GPU ingeschakeld (sneller)")
+        else:
+            self.log("Verwerking op CPU ingeschakeld (langzamer)")
+        
         threading.Thread(target=self.process_queue, args=(output_dir,), daemon=True).start()
     
     def stop_processing(self):
@@ -279,6 +338,7 @@ class WhisperSubtitleGenerator:
         model_size = self.model_size.get()
         taal = self.taal.get()
         taal_naam = self.iso_naar_taal.get(taal, taal.upper())
+        use_gpu = self.use_gpu.get()
         
         self.log(f"Geselecteerde taal: {taal_naam} ({taal})")
         self.log(f"Model grootte: {model_size}")
@@ -290,10 +350,24 @@ class WhisperSubtitleGenerator:
             # Laad Whisper modules
             import whisper
             from whisper.utils import get_writer
+            import torch
+            
+            # Set device
+            device = "cuda" if torch.cuda.is_available() and use_gpu else "cpu"
+            if device == "cuda":
+                self.log("Gebruik NVIDIA GPU voor verwerking")
+            else:
+                if use_gpu:
+                    self.log("GPU niet beschikbaar, terugvallen op CPU")
+                else:
+                    self.log("CPU geselecteerd voor verwerking")
             
             # Laad het model eenmalig voor alle bestanden
-            self.log(f"Model laden... (dit kan even duren)")
-            model = whisper.load_model(model_size)
+            self.log(f"Model '{model_size}' laden op {device}... (dit kan even duren)")
+            start_time = time.time()
+            model = whisper.load_model(model_size, device=device)
+            load_time = time.time() - start_time
+            self.log(f"Model geladen in {load_time:.2f} seconden")
             
             while not self.processing_queue.empty() and self.is_processing:
                 video_path = self.processing_queue.get()
@@ -312,12 +386,16 @@ class WhisperSubtitleGenerator:
                     
                     # Voer transcriptie uit met de geselecteerde taal
                     self.log(f"Transcriptie uitvoeren op {video_name}...")
+                    transcribe_start = time.time()
                     result = model.transcribe(
                         video_path,
                         language=taal,  # Gebruik de geselecteerde taal
                         task="transcribe",
-                        verbose=False
+                        verbose=False,
+                        fp16=False if device == "cpu" else True  # Gebruik FP16 alleen op GPU
                     )
+                    transcribe_time = time.time() - transcribe_start
+                    self.log(f"Transcriptie voltooid in {transcribe_time:.2f} seconden")
                     
                     # Maak SRT writer
                     srt_writer = get_writer("srt", output_dir)
