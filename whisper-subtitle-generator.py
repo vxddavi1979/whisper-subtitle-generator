@@ -50,7 +50,7 @@ class WhisperSubtitleGenerator:
         
         # Status variabelen
         self.is_processing = False
-        self.processing_queue = queue.Queue()
+        self.task_queue = queue.Queue()  # Hernoemen naar task_queue voor duidelijkheid
         self.current_file = tk.StringVar(value="")
         
         # UI opbouwen
@@ -307,12 +307,12 @@ class WhisperSubtitleGenerator:
         self.progress.start(10)
         
         # Reset de verwerkingswachtrij
-        while not self.processing_queue.empty():
-            self.processing_queue.get()
+        while not self.task_queue.empty():
+            self.task_queue.get()
         
         # Zet alle bestanden in de wachtrij
         for video_path in self.video_paths:
-            self.processing_queue.put(video_path)
+            self.task_queue.put(video_path)
         
         total_files = len(self.video_paths)
         self.log(f"Start verwerking van {total_files} bestand(en)")
@@ -323,7 +323,9 @@ class WhisperSubtitleGenerator:
         else:
             self.log("Verwerking op CPU ingeschakeld (langzamer)")
         
-        threading.Thread(target=self.process_queue, args=(output_dir,), daemon=True).start()
+        # Start verwerking in een aparte thread
+        processing_thread = threading.Thread(target=self.process_files, args=(output_dir,), daemon=True)
+        processing_thread.start()
     
     def stop_processing(self):
         if not self.is_processing:
@@ -334,7 +336,11 @@ class WhisperSubtitleGenerator:
         self.stop_button.config(state=tk.DISABLED)
         self.current_file.set("Gestopt")
     
-    def process_queue(self, output_dir):
+    def process_files(self, output_dir):
+        """
+        Verwerkt alle bestanden in de task_queue en genereert ondertitels.
+        Deze functie wordt uitgevoerd in een aparte thread.
+        """
         model_size = self.model_size.get()
         taal = self.taal.get()
         taal_naam = self.iso_naar_taal.get(taal, taal.upper())
@@ -343,7 +349,7 @@ class WhisperSubtitleGenerator:
         self.log(f"Geselecteerde taal: {taal_naam} ({taal})")
         self.log(f"Model grootte: {model_size}")
         
-        total_files = self.processing_queue.qsize()
+        total_files = self.task_queue.qsize()
         processed_files = 0
         
         try:
@@ -369,8 +375,8 @@ class WhisperSubtitleGenerator:
             load_time = time.time() - start_time
             self.log(f"Model geladen in {load_time:.2f} seconden")
             
-            while not self.processing_queue.empty() and self.is_processing:
-                video_path = self.processing_queue.get()
+            while not self.task_queue.empty() and self.is_processing:
+                video_path = self.task_queue.get()
                 processed_files += 1
                 
                 # Update huidige bestand info
@@ -378,9 +384,13 @@ class WhisperSubtitleGenerator:
                 self.current_file.set(f"({processed_files}/{total_files}) {video_name}")
                 
                 try:
-                    # Toon bestandsinfo
+                    # Bepaal de bestandsnamen
                     base_name = os.path.splitext(video_name)[0]
                     output_path = os.path.join(output_dir, f"{base_name}.{taal}.srt")
+                    
+                    # Log informatie over de bestandsnamen
+                    self.log(f"Oorspronkelijke video bestandsnaam: {video_name}")
+                    self.log(f"Verwachte ondertitel bestandsnaam: {base_name}.{taal}.srt")
                     
                     self.log(f"Verwerking van: {video_name} ({processed_files}/{total_files})")
                     
@@ -392,7 +402,7 @@ class WhisperSubtitleGenerator:
                         language=taal,  # Gebruik de geselecteerde taal
                         task="transcribe",
                         verbose=False,
-                        fp16=False if device == "cpu" else True  # Gebruik FP16 alleen op GPU
+                        fp16=(device == "cuda")  # Gebruik FP16 alleen op GPU
                     )
                     transcribe_time = time.time() - transcribe_start
                     self.log(f"Transcriptie voltooid in {transcribe_time:.2f} seconden")
@@ -404,10 +414,27 @@ class WhisperSubtitleGenerator:
                     self.log(f"SRT-bestand genereren voor {video_name}...")
                     srt_writer(result, base_name, {"max_line_width": 42, "max_line_count": 2})
                     
-                    # Hernoem bestand naar [taal].srt als dat nog niet is gedaan
+                    # Hernoem bestand naar [oorspronkelijke_naam].[taal].srt
                     srt_default_path = os.path.join(output_dir, f"{base_name}.srt")
-                    if os.path.exists(srt_default_path) and not os.path.exists(output_path):
+                    if os.path.exists(srt_default_path):
+                        self.log(f"Hernoemen van {srt_default_path} naar {output_path}")
+                        # Verwijder het doelbestand als het al bestaat om fouten te voorkomen
+                        if os.path.exists(output_path):
+                            os.remove(output_path)
                         os.rename(srt_default_path, output_path)
+                    else:
+                        self.log(f"Waarschuwing: Verwacht SRT-bestand niet gevonden: {srt_default_path}")
+                        # Zoek naar mogelijke andere SRT-bestanden in dezelfde map
+                        dir_path = os.path.dirname(srt_default_path)
+                        for file in os.listdir(dir_path):
+                            if file.endswith(".srt") and base_name in file:
+                                found_path = os.path.join(dir_path, file)
+                                self.log(f"Gevonden alternatief SRT-bestand: {found_path}")
+                                if os.path.exists(output_path):
+                                    os.remove(output_path)
+                                os.rename(found_path, output_path)
+                                self.log(f"Hernoemd naar: {output_path}")
+                                break
                         
                     self.log(f"Ondertitels opgeslagen in: {output_path}")
                     
