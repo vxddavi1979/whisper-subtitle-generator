@@ -1,27 +1,18 @@
-# Whisper Subtitle Generator (Nederlands)
+# Whisper Subtitle Generator
 
-Een gebruiksvriendelijke desktop applicatie om automatisch Nederlandse ondertitels te genereren voor video's met behulp van OpenAI's Whisper spraakherkenningsmodel. Ondersteunt batch-verwerking voor meerdere videobestanden.
+Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genereren voor video's met behulp van OpenAI's Whisper spraakherkenningsmodel. Ondersteunt batch-verwerking voor meerdere videobestanden en maakt gebruik van GPU-versnelling wanneer beschikbaar.
 
 ## Functies
 
 - Automatische spraakherkenning met behulp van OpenAI's Whisper AI
+- GPU-versnelling voor snellere verwerking (5-10x sneller dan CPU)
 - Batch-verwerking van meerdere videobestanden tegelijk
 - Gebruiksvriendelijke interface om bestanden te selecteren en ondertitelingsopties in te stellen
 - Ondersteuning voor verschillende videoformaten (mp4, avi, mov, mkv, webm, etc.)
-- Genereert ondertitels in SRT-formaat met de extensie `.nl.srt`
+- Genereert ondertitels in SRT-formaat met de extensie overeenkomstig de gekozen taal (bijv. `.nl.srt`)
 - Ondersteuning voor meerdere talen (Nederlands, Engels, Duits, Frans, enz.)
 - Automatische bestandsnaamgeving met de juiste taalcode (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels)
 - Real-time voortgangsindicator en logvenster
-
-## Vereisten
-
-- Python 3.8 of hoger
-- FFmpeg (moet in het systeempad beschikbaar zijn)
-- OpenAI Whisper
-- De volgende Python-pakketten:
-  - tkinter
-  - whisper
-  - ffmpeg-python
 
 ## Installatie
 
@@ -34,7 +25,14 @@ Een gebruiksvriendelijke desktop applicatie om automatisch Nederlandse ondertite
 2. Installeer de benodigde afhankelijkheden:
    ```
    pip install git+https://github.com/openai/whisper.git
+   pip install torch torchvision torchaudio
    pip install ffmpeg-python
+   ```
+
+   Voor GPU-ondersteuning, zorg dat je de juiste PyTorch versie installeert met CUDA-ondersteuning:
+   ```
+   # Voor NVIDIA GPU's met CUDA
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
    ```
 
 3. Zorg ervoor dat FFmpeg is geïnstalleerd op je systeem:
@@ -53,6 +51,33 @@ Een gebruiksvriendelijke desktop applicatie om automatisch Nederlandse ondertite
    - Klik op "Toevoegen..." om één of meerdere videobestanden te selecteren
    - Gebruik "Verwijderen" om geselecteerde bestanden te verwijderen
    - Gebruik "Alles verwijderen" om de lijst leeg te maken
+
+3. Kies verwerking op GPU of CPU:
+   - GPU: Veel sneller, aanbevolen als je een NVIDIA GPU hebt
+   - CPU: Langzamer, maar werkt op alle computers
+
+4. Kies de gewenste modelgrootte:
+   - **tiny**: Snelste, maar minst nauwkeurige
+   - **base**: Sneller, redelijke nauwkeurigheid
+   - **small**: Goede balans tussen snelheid en nauwkeurigheid
+   - **medium**: Nauwkeuriger, maar langzamer
+   - **large**: Meest nauwkeurig, maar traagste
+
+5. Selecteer de gewenste taal voor je ondertitels:
+   - Nederlands (nl)
+   - Engels (en)
+   - Duits (de)
+   - Frans (fr)
+   - Spaans (es)
+   - En vele andere talen
+
+6. (Optioneel) Kies een uitvoermap, of laat het programma de ondertitels naast de video opslaan
+
+7. Klik op "Start" en wacht tot het proces is voltooid
+   - De voortgang wordt getoond voor elk bestand
+   - Je kunt het proces pauzeren door op "Stop" te klikken
+
+8. De ondertitels worden opgeslagen als `[video-naam].[taalcode].srt` in de gekozen map (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels) om de lijst leeg te maken
 
 3. Kies de gewenste modelgrootte:
    - **tiny**: Snelste, maar minst nauwkeurige
