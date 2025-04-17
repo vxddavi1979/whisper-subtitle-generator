@@ -507,7 +507,7 @@ class WhisperSubtitleGenerator:
                 try:
                     # Bepaal de bestandsnamen
                     video_full_name = os.path.basename(video_path)
-                    video_name_without_ext = video_full_name.rsplit('.', 1)[0]  # Split op laatste punt
+                    video_name_without_ext = os.path.splitext(video_full_name)[0]  # Verbeterd: gebruik os.path.splitext
                     output_path = os.path.join(output_dir, f"{video_name_without_ext}.{taal}.srt")
                     
                     # Log informatie over de bestandsnamen
@@ -534,10 +534,10 @@ class WhisperSubtitleGenerator:
                     
                     # Schrijf SRT-bestand
                     self.log(f"SRT-bestand genereren voor {video_name}...")
-                    srt_writer(result, base_name, {"max_line_width": 42, "max_line_count": 2})
-                    
+                    srt_writer(result, video_name_without_ext, {"max_line_width": 42, "max_line_count": 2})
+
                     # Hernoem bestand naar [oorspronkelijke_naam].[taal].srt
-                    srt_default_path = os.path.join(output_dir, f"{base_name}.srt")
+                    srt_default_path = os.path.join(output_dir, f"{video_name_without_ext}.srt")
                     if os.path.exists(srt_default_path):
                         self.log(f"Hernoemen van {srt_default_path} naar {output_path}")
                         # Verwijder het doelbestand als het al bestaat om fouten te voorkomen
@@ -549,7 +549,7 @@ class WhisperSubtitleGenerator:
                         # Zoek naar mogelijke andere SRT-bestanden in dezelfde map
                         dir_path = os.path.dirname(srt_default_path)
                         for file in os.listdir(dir_path):
-                            if file.endswith(".srt") and base_name in file:
+                            if file.endswith(".srt") and video_name_without_ext in file:  # Gebruik video_name_without_ext hier
                                 found_path = os.path.join(dir_path, file)
                                 self.log(f"Gevonden alternatief SRT-bestand: {found_path}")
                                 if os.path.exists(output_path):
