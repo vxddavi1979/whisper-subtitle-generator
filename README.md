@@ -17,8 +17,6 @@ Een video van 10 minuten verwerken met het "small" model:
 
 Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genereren voor video's met behulp van OpenAI's Whisper spraakherkenningsmodel. Ondersteunt batch-verwerking voor meerdere videobestanden, maakt gebruik van GPU-versnelling wanneer beschikbaar, en kan automatisch tekst voor slechthorenden verwijderen.
 
-![Whisper Subtitle Generator Screenshot](screenshot.png)
-
 ## Functies
 
 - Automatische spraakherkenning met behulp van OpenAI's Whisper AI
