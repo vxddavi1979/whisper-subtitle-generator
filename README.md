@@ -2,7 +2,7 @@
 
 Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genereren voor video's met behulp van OpenAI's Whisper spraakherkenningsmodel. Ondersteunt batch-verwerking voor meerdere videobestanden en maakt gebruik van GPU-versnelling wanneer beschikbaar.
 
-![image](https://github.com/user-attachments/assets/157826e9-1a8a-4657-9b7d-8a6662964ab8)
+![image](https://github.com/user-attachments/assets/6d5da6b3-5652-46c0-af02-83828ac30a74)
 
 | Hardware | Relatieve snelheid | Opmerkingen |
 |----------|-------------------|------------|
