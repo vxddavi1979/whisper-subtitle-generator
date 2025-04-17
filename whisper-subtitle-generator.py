@@ -506,12 +506,13 @@ class WhisperSubtitleGenerator:
                 
                 try:
                     # Bepaal de bestandsnamen
-                    base_name = os.path.splitext(video_name)[0]
-                    output_path = os.path.join(output_dir, f"{base_name}.{taal}.srt")
+                    video_full_name = os.path.basename(video_path)
+                    video_name_without_ext = video_full_name.rsplit('.', 1)[0]  # Split op laatste punt
+                    output_path = os.path.join(output_dir, f"{video_name_without_ext}.{taal}.srt")
                     
                     # Log informatie over de bestandsnamen
                     self.log(f"Oorspronkelijke video bestandsnaam: {video_name}")
-                    self.log(f"Verwachte ondertitel bestandsnaam: {base_name}.{taal}.srt")
+                    self.log(f"Verwachte ondertitel bestandsnaam: {video_name_without_ext}.{taal}.srt")
                     
                     self.log(f"Verwerking van: {video_name} ({processed_files}/{total_files})")
                     
