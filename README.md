@@ -130,36 +130,11 @@ Meertalige ondersteuning: Kies uit 19 verschillende talen voor je ondertitels
 6. Kies of je tekst voor slechthorenden wilt verwijderen:
    - Vink de optie "Tekst voor slechthorenden verwijderen" aan om beschrijvingen van geluiden, sprekerinformatie en tekst tussen haakjes automatisch te verwijderen
 
-7. (Optioneel) Kies een uitvoermap, of laat het programma de ondertitels naast de video opslaan
-
-8. Klik op "Start" en wacht tot het proces is voltooid
+7. Klik op "Start" en wacht tot het proces is voltooid
    - De voortgang wordt getoond voor elk bestand
    - Je kunt het proces pauzeren door op "Stop" te klikken
 
-9. De ondertitels worden opgeslagen als `[video-naam].[taalcode].srt` in de gekozen map (bijv. video.nl.srt voor Nederlands) om de lijst leeg te maken
-
-3. Kies de gewenste modelgrootte:
-   - **tiny**: Snelste, maar minst nauwkeurige
-   - **base**: Sneller, redelijke nauwkeurigheid
-   - **small**: Goede balans tussen snelheid en nauwkeurigheid
-   - **medium**: Nauwkeuriger, maar langzamer
-   - **large**: Meest nauwkeurig, maar traagste
-
-4. Selecteer de gewenste taal voor je ondertitels:
-   - Nederlands (nl)
-   - Engels (en)
-   - Duits (de)
-   - Frans (fr)
-   - Spaans (es)
-   - En vele andere talen
-
-5. (Optioneel) Kies een uitvoermap, of laat het programma de ondertitels naast de video opslaan
-
-6. Klik op "Start" en wacht tot het proces is voltooid
-   - De voortgang wordt getoond voor elk bestand
-   - Je kunt het proces pauzeren door op "Stop" te klikken
-
-7. De ondertitels worden opgeslagen als `[video-naam].[taalcode].srt` in de gekozen map (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels)
+8. De ondertitels worden opgeslagen als `[video-naam].[taalcode].srt` in de gekozen map (bijv. video.nl.srt voor Nederlands) om de lijst leeg te maken
 
 ## Ondertitelreiniging
 
