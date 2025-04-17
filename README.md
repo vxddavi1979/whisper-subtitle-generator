@@ -4,11 +4,27 @@ Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genere
 
 ![image](https://github.com/user-attachments/assets/4eb01e1a-09bf-41b7-a303-9d5c4860f828)
 
+| Hardware | Relatieve snelheid | Opmerkingen |
+|----------|-------------------|------------|
+| GPU (NVIDIA GTX 1070 of beter) | 5-10x sneller | Aanbevolen voor grotere bestanden en batch verwerking |
+| CPU (moderne multi-core) | Basissnelheid | Werkt op alle computers maar veel langzamer |
+
+Een video van 10 minuten verwerken met het "small" model:
+- Met GPU (GTX 1070): ~1-2 minuten
+- Met CPU (moderne i7/Ryzen): ~7-15 minuten
+
+**Tip**: Als je een compatibele NVIDIA GPU hebt zoals de GTX 1070, zorg dan dat je de GPU-modus gebruikt voor veel snellere verwerking!# Whisper Subtitle Generator
+
+Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genereren voor video's met behulp van OpenAI's Whisper spraakherkenningsmodel. Ondersteunt batch-verwerking voor meerdere videobestanden, maakt gebruik van GPU-versnelling wanneer beschikbaar, en kan automatisch tekst voor slechthorenden verwijderen.
+
+![Whisper Subtitle Generator Screenshot](screenshot.png)
+
 ## Functies
 
 - Automatische spraakherkenning met behulp van OpenAI's Whisper AI
 - GPU-versnelling voor snellere verwerking (5-10x sneller dan CPU)
 - Batch-verwerking van meerdere videobestanden tegelijk
+- Automatische verwijdering van tekst voor slechthorenden (optioneel)
 - Gebruiksvriendelijke interface om bestanden te selecteren en ondertitelingsopties in te stellen
 - Ondersteuning voor verschillende videoformaten (mp4, avi, mov, mkv, webm, etc.)
 - Genereert ondertitels in SRT-formaat met de extensie overeenkomstig de gekozen taal (bijv. `.nl.srt`)
@@ -98,13 +114,16 @@ Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genere
    - Spaans (es)
    - En vele andere talen
 
-6. (Optioneel) Kies een uitvoermap, of laat het programma de ondertitels naast de video opslaan
+6. Kies of je tekst voor slechthorenden wilt verwijderen:
+   - Vink de optie "Tekst voor slechthorenden verwijderen" aan om beschrijvingen van geluiden, sprekerinformatie en tekst tussen haakjes automatisch te verwijderen
 
-7. Klik op "Start" en wacht tot het proces is voltooid
+7. (Optioneel) Kies een uitvoermap, of laat het programma de ondertitels naast de video opslaan
+
+8. Klik op "Start" en wacht tot het proces is voltooid
    - De voortgang wordt getoond voor elk bestand
    - Je kunt het proces pauzeren door op "Stop" te klikken
 
-8. De ondertitels worden opgeslagen als `[video-naam].[taalcode].srt` in de gekozen map (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels) om de lijst leeg te maken
+9. De ondertitels worden opgeslagen als `[video-naam].[taalcode].srt` in de gekozen map (bijv. video.nl.srt voor Nederlands) om de lijst leeg te maken
 
 3. Kies de gewenste modelgrootte:
    - **tiny**: Snelste, maar minst nauwkeurige
@@ -129,20 +148,17 @@ Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genere
 
 7. De ondertitels worden opgeslagen als `[video-naam].[taalcode].srt` in de gekozen map (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels)
 
-## Prestaties en GPU vs CPU
+## Ondertitelreiniging
 
-De verwerkingssnelheid van Whisper is sterk afhankelijk van de gebruikte hardware:
+De Whisper Subtitle Generator bevat een krachtige functie om tekst voor slechthorenden automatisch te verwijderen uit de ondertitels. Dit zorgt voor schonere ondertitels die alleen de gesproken tekst bevatten, zonder afleidende elementen.
 
-| Hardware | Relatieve snelheid | Opmerkingen |
-|----------|-------------------|------------|
-| GPU (NVIDIA GTX 1070 of beter) | 5-10x sneller | Aanbevolen voor grotere bestanden en batch verwerking |
-| CPU (moderne multi-core) | Basissnelheid | Werkt op alle computers maar veel langzamer |
+De reinigingsfunctie verwijdert:
+- Tekst tussen haakjes, bijv. [lacht], (muziek speelt), {deurbel}
+- Geluidseffecten zoals *lacht*, #applaus#
+- Tekst in hoofdletters voor een dubbele punt (sprekers), bijv. "JOHN:" wordt verwijderd, alleen de tekst blijft over
+- Volledige regels in hoofdletters (vaak geluidseffecten of andere aanwijzingen)
 
-Een video van 10 minuten verwerken met het "small" model:
-- Met GPU (GTX 1070): ~1-2 minuten
-- Met CPU (moderne i7/Ryzen): ~7-15 minuten
-
-**Tip**: Als je een compatibele NVIDIA GPU hebt zoals de GTX 1070, zorg dan dat je de GPU-modus gebruikt voor veel snellere verwerking!
+Deze functie kan worden in- of uitgeschakeld via de checkbox "Tekst voor slechthorenden verwijderen" in de interface.
 
 ## Modelgroottes en prestaties
 
@@ -155,6 +171,13 @@ Een video van 10 minuten verwerken met het "small" model:
 | large  | 1550M   | ~10GB          | 1x                | Uitstekend    |
 
 De aanbevolen modelgrootte is "small" voor een goede balans tussen snelheid en nauwkeurigheid. Als je een goede GPU hebt, kun je ook het "medium" model overwegen.
+
+## Bestandsnaamgeving
+
+De generator zorgt ervoor dat de ondertitelbestanden worden opgeslagen met de volledige originele bestandsnaam van de video gevolgd door de taalcode, bijvoorbeeld:
+
+- Voor video `13.Graves.2019.1080p.WEB-DL.DD5.1.H264-CMRG.mkv`
+- Wordt de ondertitel `13.Graves.2019.1080p.WEB-DL.DD5.1.H264-CMRG.nl.srt` (voor Nederlands)
 
 ## Probleemoplossing
 
