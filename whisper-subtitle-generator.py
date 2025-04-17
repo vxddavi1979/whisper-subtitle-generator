@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Whisper Subtitle Generator met GPU ondersteuning en ondertitelreiniging
+# Versie 1.2 - Met verbeterde bestandsnaamgeving
+
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -16,8 +21,6 @@ class WhisperSubtitleGenerator:
         
         # Instellingen
         self.video_paths = []  # We gebruiken een lijst in plaats van een StringVar
-        self.output_dir = tk.StringVar()
-        self.output_dir.set(os.path.expanduser("~/Documents"))
         self.model_size = tk.StringVar(value="small")  # Standaard model grootte
         self.taal = tk.StringVar(value="nl")  # Nederlands als standaard
         self.use_gpu = tk.BooleanVar(value=True)  # Standaard GPU gebruiken indien beschikbaar
@@ -123,11 +126,6 @@ class WhisperSubtitleGenerator:
         ttk.Checkbutton(model_frame, text="Tekst voor slechthorenden verwijderen", 
                        variable=self.clean_subtitles).grid(row=1, column=2, padx=15, sticky=tk.W)
         
-        # Uitvoer map
-        ttk.Label(model_frame, text="Uitvoer map:").grid(row=2, column=0, sticky=tk.W, pady=5)
-        ttk.Entry(model_frame, textvariable=self.output_dir, width=50).grid(row=2, column=1, columnspan=2, padx=5, pady=5)
-        ttk.Button(model_frame, text="Bladeren...", command=self.browse_output_dir).grid(row=2, column=3, padx=5, pady=5)
-        
         # Huidige voortgang
         current_frame = ttk.LabelFrame(main_frame, text="Huidige verwerking", padding="10")
         current_frame.pack(fill=tk.X, pady=10)
@@ -206,10 +204,6 @@ class WhisperSubtitleGenerator:
                 if file not in self.video_paths:
                     self.video_paths.append(file)
                     self.files_listbox.insert(tk.END, os.path.basename(file))
-            
-            # Standaard uitvoermap instellen op basis van het eerste bestand als het nog niet is ingesteld
-            if not self.output_dir.get() and self.video_paths:
-                self.output_dir.set(os.path.dirname(self.video_paths[0]))
             
             self.log(f"{len(filenames)} video bestand(en) toegevoegd")
     
@@ -290,17 +284,6 @@ class WhisperSubtitleGenerator:
             messagebox.showerror("Fout", "Selecteer eerst één of meer videobestanden.")
             return
         
-        output_dir = self.output_dir.get()
-        
-        # Als er geen uitvoermap is geselecteerd, gebruik de map van de eerste video
-        if not output_dir:
-            output_dir = os.path.dirname(self.video_paths[0])
-            self.output_dir.set(output_dir)
-        
-        if not os.path.exists(output_dir):
-            messagebox.showerror("Fout", "De geselecteerde uitvoer map bestaat niet.")
-            return
-            
         # Controleer dependencies voordat we beginnen
         if not self.check_dependencies():
             return
@@ -333,7 +316,7 @@ class WhisperSubtitleGenerator:
             self.log("Reiniging van tekst voor slechthorenden is ingeschakeld")
         
         # Start verwerking in een aparte thread
-        processing_thread = threading.Thread(target=self.process_files, args=(output_dir,), daemon=True)
+        processing_thread = threading.Thread(target=self.process_files, daemon=True)
         processing_thread.start()
     
     def stop_processing(self):
