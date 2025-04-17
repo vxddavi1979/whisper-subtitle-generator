@@ -176,8 +176,8 @@ De aanbevolen modelgrootte is "small" voor een goede balans tussen snelheid en n
 
 De generator zorgt ervoor dat de ondertitelbestanden worden opgeslagen met de volledige originele bestandsnaam van de video gevolgd door de taalcode, bijvoorbeeld:
 
-- Voor video `13.Graves.2019.1080p.WEB-DL.DD5.1.H264-CMRG.mkv`
-- Wordt de ondertitel `13.Graves.2019.1080p.WEB-DL.DD5.1.H264-CMRG.nl.srt` (voor Nederlands)
+- Voor video `movie.mkv`
+- Wordt de ondertitel `movie.nl.srt` (voor Nederlands)
 
 ## Probleemoplossing
 
