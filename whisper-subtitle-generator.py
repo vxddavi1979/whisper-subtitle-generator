@@ -21,6 +21,7 @@ class WhisperSubtitleGenerator:
         self.model_size = tk.StringVar(value="small")  # Standaard model grootte
         self.taal = tk.StringVar(value="nl")  # Nederlands als standaard
         self.use_gpu = tk.BooleanVar(value=True)  # Standaard GPU gebruiken indien beschikbaar
+        self.clean_subtitles = tk.BooleanVar(value=True)  # Standaard tekst voor slechthorenden verwijderen
         
         # Taal naar ISO-code mapping
         self.taal_mapping = {
@@ -50,7 +51,7 @@ class WhisperSubtitleGenerator:
         
         # Status variabelen
         self.is_processing = False
-        self.task_queue = queue.Queue()  # Hernoemen naar task_queue voor duidelijkheid
+        self.task_queue = queue.Queue()
         self.current_file = tk.StringVar(value="")
         
         # UI opbouwen
@@ -117,6 +118,10 @@ class WhisperSubtitleGenerator:
             self.taal.set(self.taal_mapping[selected_taal])
         
         taal_combobox.bind('<<ComboboxSelected>>', on_taal_selected)
+        
+        # Clean ondertitels optie
+        ttk.Checkbutton(model_frame, text="Tekst voor slechthorenden verwijderen", 
+                       variable=self.clean_subtitles).grid(row=1, column=2, padx=15, sticky=tk.W)
         
         # Uitvoer map
         ttk.Label(model_frame, text="Uitvoer map:").grid(row=2, column=0, sticky=tk.W, pady=5)
@@ -322,6 +327,10 @@ class WhisperSubtitleGenerator:
             self.log("Verwerking op GPU ingeschakeld (sneller)")
         else:
             self.log("Verwerking op CPU ingeschakeld (langzamer)")
+            
+        # Log of ondertitelreiniging is ingeschakeld
+        if self.clean_subtitles.get():
+            self.log("Reiniging van tekst voor slechthorenden is ingeschakeld")
         
         # Start verwerking in een aparte thread
         processing_thread = threading.Thread(target=self.process_files, args=(output_dir,), daemon=True)
@@ -335,6 +344,118 @@ class WhisperSubtitleGenerator:
         self.log("Verwerking wordt gestopt...")
         self.stop_button.config(state=tk.DISABLED)
         self.current_file.set("Gestopt")
+    
+    def clean_srt_file(self, srt_path):
+        """
+        Verwijdert tekst voor slechthorenden uit SRT-bestanden:
+        - Tekst tussen haakjes [tekst], (tekst), {tekst}
+        - Tekst in hoofdletters (als het een heel woord is)
+        - Tekst voor dubbele punt als het in hoofdletters is (PERSOON: tekst)
+        - Geluidseffecten zoals *lacht*, #muziek#, etc.
+        """
+        try:
+            self.log(f"Opschonen van ondertitelbestand: {os.path.basename(srt_path)}")
+            
+            # Lees het SRT-bestand
+            with open(srt_path, 'r', encoding='utf-8') as file:
+                lines = file.readlines()
+            
+            cleaned_lines = []
+            i = 0
+            
+            # SRT-bestanden bestaan uit blokken met 4 regels:
+            # 1: Volgnummer
+            # 2: Tijdcodes
+            # 3: Ondertiteltekst (soms meerdere regels)
+            # 4: Lege regel
+            
+            while i < len(lines):
+                # Bewaar volgnummer en tijdcodes ongewijzigd
+                if i < len(lines) and lines[i].strip().isdigit():
+                    # Volgnummer
+                    cleaned_lines.append(lines[i])
+                    i += 1
+                    
+                    # Tijdcodes (als we nog niet aan het einde zijn)
+                    if i < len(lines) and '-->' in lines[i]:
+                        cleaned_lines.append(lines[i])
+                        i += 1
+                        
+                        # Ondertiteltekst (kan meerdere regels zijn)
+                        subtitle_lines = []
+                        while i < len(lines) and lines[i].strip() != '':
+                            subtitle_lines.append(lines[i])
+                            i += 1
+                        
+                        # Reinig deze ondertiteltekst
+                        cleaned_subtitle = self.clean_subtitle_text('\n'.join(subtitle_lines))
+                        
+                        # Voeg alleen toe als er tekst overblijft na het reinigen
+                        if cleaned_subtitle.strip():
+                            cleaned_lines.append(cleaned_subtitle + '\n')
+                        else:
+                            # Als alle tekst is verwijderd, verwijder volgnummer en tijdcodes ook
+                            cleaned_lines.pop()  # Verwijder tijdcodes
+                            cleaned_lines.pop()  # Verwijder volgnummer
+                        
+                        # Lege regel
+                        if i < len(lines):
+                            cleaned_lines.append(lines[i])
+                            i += 1
+                else:
+                    # Onverwacht formaat, behoud de regel
+                    cleaned_lines.append(lines[i])
+                    i += 1
+            
+            # Schrijf de opgeschoonde tekst terug naar het bestand
+            with open(srt_path, 'w', encoding='utf-8') as file:
+                file.writelines(cleaned_lines)
+                
+            self.log(f"Ondertitelbestand succesvol opgeschoond")
+            return True
+            
+        except Exception as e:
+            self.log(f"Fout bij opschonen van ondertitelbestand: {str(e)}")
+            return False
+
+    def clean_subtitle_text(self, text):
+        """
+        Reinigt een stuk ondertiteltekst door tekst voor slechthorenden te verwijderen
+        """
+        import re
+        
+        # Verwijder tekst tussen verschillende soorten haakjes
+        # [tekst], (tekst), {tekst}
+        text = re.sub(r'\[.*?\]', '', text)
+        text = re.sub(r'\(.*?\)', '', text)
+        text = re.sub(r'\{.*?\}', '', text)
+        
+        # Verwijder geluidseffecten met * of #
+        text = re.sub(r'\*.*?\*', '', text)
+        text = re.sub(r'#.*?#', '', text)
+        
+        # Verwijder tekst in hoofdletters voor een dubbele punt
+        # Bijv. "JOHN: Hallo" wordt "Hallo"
+        text = re.sub(r'[A-Z]{2,}[A-Z\s]*:', '', text)
+        
+        # Verwijder hele regels die volledig in hoofdletters staan
+        # (vaak geluidseffecten of sprekerinformatie)
+        lines = text.split('\n')
+        cleaned_lines = []
+        
+        for line in lines:
+            # Als de regel niet volledig in hoofdletters is of alleen maar leestekens/getallen bevat
+            if not (line.strip() and line.strip().upper() == line.strip() and any(c.isalpha() for c in line)):
+                cleaned_lines.append(line)
+        
+        # Voeg de regels weer samen
+        text = '\n'.join(cleaned_lines)
+        
+        # Verwijder dubbele witruimte en witruimte aan begin/eind
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+        
+        return text
     
     def process_files(self, output_dir):
         """
@@ -437,6 +558,10 @@ class WhisperSubtitleGenerator:
                                 break
                         
                     self.log(f"Ondertitels opgeslagen in: {output_path}")
+                    
+                    # Als opschonen is ingeschakeld, reinig het bestand
+                    if self.clean_subtitles.get() and os.path.exists(output_path):
+                        self.clean_srt_file(output_path)
                     
                 except Exception as e:
                     self.log(f"FOUT bij verwerking van {video_name}: {str(e)}")
