@@ -30,6 +30,21 @@ Een gebruiksvriendelijke desktop applicatie om automatisch ondertitels te genere
 - Automatische bestandsnaamgeving met de juiste taalcode (bijv. video.nl.srt voor Nederlands, video.en.srt voor Engels)
 - Real-time voortgangsindicator en logvenster
 
+Kenmerken
+
+Gebruiksvriendelijke interface: Eenvoudig videobestanden toevoegen en ondertitels genereren
+GPU-versnelling: Ondersteuning voor NVIDIA GPU's voor snellere verwerking (5-10x sneller)
+Meerdere talen: Ondersteuning voor Nederlands, Engels, Duits, Frans en 15 andere talen
+Automatische ondertitelreiniging: Optie om tekst voor slechthorenden automatisch te verwijderen
+Verschillende modelgroottes: Keuze uit tiny, base, small, medium en large modellen
+Slimme bestandsnaamgeving: Ondertitels worden opgeslagen in dezelfde map als de video met behoud van de originele bestandsnaam
+
+Nieuwe functies in v1.2
+
+Automatische opslag in videomap: Ondertitels worden nu automatisch in dezelfde map opgeslagen als de bronvideo
+Verbeterde bestandsnaamgeving: Volledig opgeloste problemen met bestandsnaamgeving, alle delen van de originele naam blijven behouden
+Meertalige ondersteuning: Kies uit 19 verschillende talen voor je ondertitels
+
 ## Vereisten
 
 - Python 3.8 of hoger
