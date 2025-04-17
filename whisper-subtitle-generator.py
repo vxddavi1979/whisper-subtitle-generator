@@ -510,6 +510,9 @@ class WhisperSubtitleGenerator:
                     video_name_without_ext = os.path.splitext(video_full_name)[0]  # Verbeterd: gebruik os.path.splitext
                     output_path = os.path.join(output_dir, f"{video_name_without_ext}.{taal}.srt")
                     
+                    # Bewaar de originele bestandsnaam voor logging doeleinden
+                    original_filename_base = video_name_without_ext
+                    
                     # Log informatie over de bestandsnamen
                     self.log(f"Oorspronkelijke video bestandsnaam: {video_name}")
                     self.log(f"Verwachte ondertitel bestandsnaam: {video_name_without_ext}.{taal}.srt")
@@ -532,31 +535,39 @@ class WhisperSubtitleGenerator:
                     # Maak SRT writer
                     srt_writer = get_writer("srt", output_dir)
                     
-                    # Schrijf SRT-bestand
-                    self.log(f"SRT-bestand genereren voor {video_name}...")
-                    srt_writer(result, video_name_without_ext, {"max_line_width": 42, "max_line_count": 2})
-
-                    # Hernoem bestand naar [oorspronkelijke_naam].[taal].srt
-                    srt_default_path = os.path.join(output_dir, f"{video_name_without_ext}.srt")
-                    if os.path.exists(srt_default_path):
-                        self.log(f"Hernoemen van {srt_default_path} naar {output_path}")
-                        # Verwijder het doelbestand als het al bestaat om fouten te voorkomen
-                        if os.path.exists(output_path):
-                            os.remove(output_path)
-                        os.rename(srt_default_path, output_path)
-                    else:
-                        self.log(f"Waarschuwing: Verwacht SRT-bestand niet gevonden: {srt_default_path}")
-                        # Zoek naar mogelijke andere SRT-bestanden in dezelfde map
-                        dir_path = os.path.dirname(srt_default_path)
-                        for file in os.listdir(dir_path):
-                            if file.endswith(".srt") and video_name_without_ext in file:  # Gebruik video_name_without_ext hier
-                                found_path = os.path.join(dir_path, file)
-                                self.log(f"Gevonden alternatief SRT-bestand: {found_path}")
-                                if os.path.exists(output_path):
-                                    os.remove(output_path)
-                                os.rename(found_path, output_path)
-                                self.log(f"Hernoemd naar: {output_path}")
-                                break
+                    # Schrijf ondertitels direct naar een tijdelijk bestand
+                    import tempfile
+                    
+                    # Maak een tijdelijke directory
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        # Gebruik een eenvoudige bestandsnaam voor het tijdelijke bestand
+                        temp_filename = "temp_subtitle"
+                        
+                        # Maak SRT writer voor de tijdelijke map
+                        self.log(f"SRT-bestand genereren voor {video_name}...")
+                        temp_srt_writer = get_writer("srt", temp_dir)
+                        temp_srt_writer(result, temp_filename, {"max_line_width": 42, "max_line_count": 2})
+                        
+                        # Pad naar het gegenereerde tijdelijke SRT-bestand
+                        temp_srt_path = os.path.join(temp_dir, f"{temp_filename}.srt")
+                        
+                        if os.path.exists(temp_srt_path):
+                            # Lees de inhoud van het tijdelijke SRT-bestand
+                            with open(temp_srt_path, 'r', encoding='utf-8') as src_file:
+                                srt_content = src_file.read()
+                            
+                            # Schrijf naar het definitieve SRT-bestand met de juiste naam
+                            if os.path.exists(output_path):
+                                self.log(f"Bestaand bestand overschrijven: {output_path}")
+                                os.remove(output_path)
+                                
+                            with open(output_path, 'w', encoding='utf-8') as dest_file:
+                                dest_file.write(srt_content)
+                                
+                            self.log(f"Ondertitels opgeslagen met correcte bestandsnaam: {os.path.basename(output_path)}")
+                        else:
+                            self.log(f"FOUT: Tijdelijk SRT-bestand werd niet aangemaakt: {temp_srt_path}")
+                            raise Exception("Kon geen ondertitels genereren met Whisper")
                         
                     self.log(f"Ondertitels opgeslagen in: {output_path}")
                     
